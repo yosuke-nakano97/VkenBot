@@ -1,9 +1,13 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
+import sqlalchemy
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 import os
 import asyncio
 from dotenv import load_dotenv
+from models import Expense, engine
 
 #インテント作成
 intents = discord.Intents.default()
@@ -12,7 +16,8 @@ intents.voice_states = True
 
 # Cogのリスト
 INITIAL_EXTENSIONS = [
-  'cogs.music'
+  'cogs.music',
+  'cogs.moneytrack'
 ]
 
 # .envから各種変数読み出し    
