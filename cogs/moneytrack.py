@@ -17,7 +17,7 @@ class MoneyTrackCog(commands.Cog):
         price = self.validateValue(intraction, price)
         if price is not None:
             # 記録して返り値を取る
-            result = self.TrackRegester(intraction, item, price, oshi)
+            result = await self.TrackRegester(intraction, item, price, oshi)
             if result != 0:
                 # 正常終了の場合
                 await intraction.response.send_message(f"{oshi}のグッズ{item}:￥{price}")
@@ -30,6 +30,30 @@ class MoneyTrackCog(commands.Cog):
             # 式がおかしかったり、負の数を入れると警告
             await intraction.response.send_message(f"priceの値がおかしいよ!",ephemeral = True)
             
+    @app_commands.command(name="delete")
+    async def delete(self, intraction):
+        user_id = intraction.user.id
+        try:
+            # セッション生成
+            Session = sessionmaker(bind=engine)
+            session = Session()
+            # ユーザーIDでレコード検索
+            records = session.query(Expense).filter_by(user_id=user_id).limit(25)
+            
+            print(records)
+            
+        except Exception as e:
+            # 何か例外が起こったらここで対応
+            print(e)
+            
+        finally:
+            # 絶対セッション閉じてから出ていく
+            session.close()
+
+        print(records)
+        view = DeleteSelectView(records=records)
+        await intraction.response.send_message("消したいの選んでね(直近25個表示)",view = view, ephemeral = True, delete_after = 170)
+
 
     async def TrackRegester(self, intraction, item, price, oshi): 
         try:
