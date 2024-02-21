@@ -2,9 +2,11 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import re
+from datetime import datetime, timedelta ,timezone
 from sqlalchemy.orm import sessionmaker
-from models import Expense, engine
+from models import Expense, User, engine
 from cogs.views.deleteview import DeleteSelectView
+from cogs.views.detailview import JumpView
 
 class MoneyTrackCog(commands.Cog):
     
@@ -25,7 +27,7 @@ class MoneyTrackCog(commands.Cog):
                 self.MessageIdRegester(result, message.id)
             else:
                 # 異常終了のお知らせ
-                intraction.response.send_messeage("何かがおかしいよ‼再登録して‼")
+                await intraction.response.send_message("何かがおかしいよ‼再登録して‼")
         else:
             # 式がおかしかったり、負の数を入れると警告
             await intraction.response.send_message(f"priceの値がおかしいよ!",ephemeral = True)
@@ -54,14 +56,93 @@ class MoneyTrackCog(commands.Cog):
         view = DeleteSelectView(records=records)
         await intraction.response.send_message("消したいの選んでね(直近25個表示)",view = view, ephemeral = True, delete_after = 170)
 
+    @app_commands.command(name="month")
+    async def month(self, intraction, member:discord.Member):
+        user_id = member.id
+        try:
+            Session = sessionmaker(bind=engine)
+            session = Session()
+            record = session.query(User).filter_by(id=user_id).first()
+            if record:
+                if record.month_use != 0:
+                    await intraction.response.send_message(f"{member.name}の今月の出費は{record.month_use}だよ！")
+            else:
+                await intraction.response.send_message(f"まだ今月は出費がないよ！")
+
+        except Exception as e:
+            print(e)
+            await intraction.response.send_message(f"なんかおかしいみたい！")
+
+        finally:
+            session.close()
+
+    @app_commands.command(name="year")
+    async def year(self, intraction, member:discord.Member):
+        user_id = member.id
+        try:
+            Session = sessionmaker(bind=engine)
+            session = Session()
+            record = session.query(User).filter_by(id=user_id).first()
+            if record:
+                if record.month_use != 0:
+                    await intraction.response.send_message(f"{member.name}の今年の出費は{record.year_use}だよ！")
+            else:
+                await intraction.response.send_message(f"まだ今年は出費がないよ！")
+
+        except Exception as e:
+            print(e)
+            await intraction.response.send_message(f"なんかおかしいみたい！")
+
+        finally:
+            session.close()
+
+    @app_commands.command(name="total")
+    async def total(self, intraction, member:discord.Member):
+        user_id = member.id
+        try:
+            Session = sessionmaker(bind=engine)
+            session = Session()
+            record = session.query(User).filter_by(id=user_id).first()
+            if record:
+                if record.month_use != 0:
+                    await intraction.response.send_message(f"{member.name}の今年の出費は{record.total_use}だよ！")
+            else:
+                await intraction.response.send_message(f"まだ出費がないよ！")
+
+        except Exception as e:
+            print(e)
+            await intraction.response.send_message(f"なんかおかしいみたい！")
+
+        finally:
+            session.close()
+
+    @app_commands.command(name="detail")
+    async def detail(self, intraction):
+        view = JumpView()
+        await intraction.response.send_message("これ押して！",view=view)
+        pass
 
     async def TrackRegester(self, intraction, item, price, oshi): 
         try:
+            user_id = intraction.user.id
             # セッション生成
             Session = sessionmaker(bind=engine)
             session = Session()
-            # レコード作成
-            newtrack = Expense(goods_name=item, user_id=intraction.user.id, price=price, oshi=oshi)
+            # Expenseレコード作成
+            newtrack = Expense(goods_name=item, user_id=user_id, price=price, oshi=oshi)
+
+            # useidからユーザーがすでにレコードを持ってるか確認
+            user = session.query(User).filter_by(id=user_id).first()
+            if user:
+                # もってたら追加
+                user.month_use += price
+                user.year_use += price
+                user.total_use += price
+            else:
+                # 持ってなかったら登録
+                newuser = User(id=user_id, month_use=price, year_use=price, total_use=price)
+                session.add(newuser)
+
             # レコードをDBに追加
             session.add(newtrack)
             session.commit()

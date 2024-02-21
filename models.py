@@ -16,8 +16,17 @@ class Expense(Base):
     user_id = Column(Integer, index=True)
     price = Column(Integer)
     oshi = Column(String(length=255))
-    message_id = Column(Integer, default=0, index = True)
-    created_at = Column(DateTime)
+    message_id = Column(Integer, default=0, index=True)
+    created_at = Column(DateTime, index=True)
+
+class User(Base):
+    __tablename__ = 'user'
+
+    id = Column(Integer, primary_key=True, index=True)
+    total_use = Column(Integer)
+    year_use = Column(Integer)
+    month_use = Column(Integer)
+
 
 engine = sqlalchemy.create_engine('sqlite:///sample_db.sqlite3', echo=True)
 
