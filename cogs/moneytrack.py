@@ -1,7 +1,8 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-import re
+import re, os
+from dotenv import load_dotenv
 from datetime import datetime, timedelta ,timezone
 from sqlalchemy.orm import sessionmaker
 from models import Expense, User, engine
@@ -11,10 +12,16 @@ from cogs.views.detailview import JumpView
 class MoneyTrackCog(commands.Cog):
     
     def __init__(self, bot):
+        load_dotenv()
+        self.channel_id = int(os.environ.get("CHANNEL_ID"))
         self.bot = bot
     
     @app_commands.command(name="use")
     async def use(self, intraction, item: str, price: str, oshi: str):
+        # チャンネルが専用チャンネルか確認
+        if(intraction.channel_id !=self.channel_id):
+            await intraction.response.send_message("ここじゃだめだよ", ephemeral=True)
+            return 0
         # priceを正の数値に
         price = self.validateValue(intraction, price)
         if price is not None:
@@ -24,7 +31,7 @@ class MoneyTrackCog(commands.Cog):
                 # 正常終了の場合
                 await intraction.response.send_message(f"{oshi}のグッズ{item}:￥{price}")
                 message = await intraction.original_response()
-                self.MessageIdRegester(result, message.id)
+                await self.MessageIdRegester(result, message.id)
             else:
                 # 異常終了のお知らせ
                 await intraction.response.send_message("何かがおかしいよ‼再登録して‼")
@@ -34,6 +41,10 @@ class MoneyTrackCog(commands.Cog):
             
     @app_commands.command(name="delete")
     async def delete(self, intraction):
+        # チャンネルが専用チャンネルか確認
+        if(intraction.channel_id !=self.channel_id):
+            await intraction.response.send_message("ここじゃだめだよ", ephemeral=True)
+            return 0
         user_id = intraction.user.id
         try:
             # セッション生成
@@ -52,12 +63,15 @@ class MoneyTrackCog(commands.Cog):
             # 絶対セッション閉じてから出ていく
             session.close()
 
-        print(records)
         view = DeleteSelectView(records=records)
         await intraction.response.send_message("消したいの選んでね(直近25個表示)",view = view, ephemeral = True, delete_after = 170)
 
     @app_commands.command(name="month")
     async def month(self, intraction, member:discord.Member):
+        # チャンネルが専用チャンネルか確認
+        if(intraction.channel_id !=self.channel_id):
+            await intraction.response.send_message("ここじゃだめだよ", ephemeral=True)
+            return 0
         user_id = member.id
         try:
             Session = sessionmaker(bind=engine)
@@ -78,6 +92,10 @@ class MoneyTrackCog(commands.Cog):
 
     @app_commands.command(name="year")
     async def year(self, intraction, member:discord.Member):
+        # チャンネルが専用チャンネルか確認
+        if(intraction.channel_id !=self.channel_id):
+            await intraction.response.send_message("ここじゃだめだよ", ephemeral=True)
+            return 0
         user_id = member.id
         try:
             Session = sessionmaker(bind=engine)
@@ -98,6 +116,10 @@ class MoneyTrackCog(commands.Cog):
 
     @app_commands.command(name="total")
     async def total(self, intraction, member:discord.Member):
+        # チャンネルが専用チャンネルか確認
+        if(intraction.channel_id !=self.channel_id):
+            await intraction.response.send_message("ここじゃだめだよ", ephemeral=True)
+            return 0
         user_id = member.id
         try:
             Session = sessionmaker(bind=engine)
@@ -118,9 +140,13 @@ class MoneyTrackCog(commands.Cog):
 
     @app_commands.command(name="detail")
     async def detail(self, intraction):
-        view = JumpView()
+        # チャンネルが専用チャンネルか確認
+        if(intraction.channel_id !=self.channel_id):
+            await intraction.response.send_message("ここじゃだめだよ", ephemeral=True)
+            return 0
+        user_id = intraction.user.id
+        view = JumpView(user_id=user_id)
         await intraction.response.send_message("これ押して！",view=view)
-        pass
 
     async def TrackRegester(self, intraction, item, price, oshi): 
         try:
@@ -159,7 +185,7 @@ class MoneyTrackCog(commands.Cog):
             session.close()
             return result
 
-    def MessageIdRegester(self, id, message_id):
+    async def MessageIdRegester(self, id, message_id):
         try:
             # セッション生成
             Session = sessionmaker(bind=engine)

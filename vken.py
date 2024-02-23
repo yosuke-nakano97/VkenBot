@@ -1,13 +1,11 @@
 import discord
 from discord.ext import commands
-from discord import app_commands
-import sqlalchemy
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
 import os
 import asyncio
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 from dotenv import load_dotenv
-from models import Expense, engine
+import cogs.dbmanage as dbmanage
 
 #インテント作成
 intents = discord.Intents.default()
@@ -36,6 +34,12 @@ class DiscordBot(commands.Bot):
         self.tree.copy_global_to(guild=discord.Object(id=SERVERID))
         await self.tree.sync(guild=discord.Object(id=SERVERID))
         return await super().setup_hook()
+
+# 年、月が替わったらリセットをかける
+scheduler = BackgroundScheduler()
+scheduler.add_job(dbmanage.monthly_initialize, CronTrigger(day=1, hour=0, minute=0, second=0))
+scheduler.add_job(dbmanage.anual_initialize,CronTrigger(month=1, day=1, hour=0, minute=0, second=0))
+scheduler.start()
 
 # Botオブジェクト生成
 bot = DiscordBot(intents=intents, command_prefix="!")

@@ -1,10 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-import os
-import random
-import datetime
-import asyncio
+import os, random, datetime, asyncio
 
 
 class MusicCog(commands.Cog):
